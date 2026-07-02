@@ -2,24 +2,28 @@
 
 import streamlit as st
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted
 
+# Configure page
+st.set_page_config(
+    page_title="Aashika Medical Chatbot",
+    page_icon="🩺"
+)
 
-# Configure Gemini API
-genai.configure(api_key="GOOGLE_API_KEY")
+# Title
+st.title("🩺 Aashika Medical Chatbot")
+st.write("Your AI learning and medical concept assistant")
 
+# API setup
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Load model
+model = genai.GenerativeModel("models/gemini-2.0-flash")
 
+# Input
+topic = st.text_input("Enter your topic")
 
-st.set_page_config(page_title="Aashika-Medical Chatbot", page_icon="🎓")
-
-
-st.title("🎓 Aashika-Medical chatbot")
-
-
-topic = st.text_input("Enter a Topic")
-
-
+# Options
 option = st.selectbox(
     "Choose Activity",
     [
@@ -30,32 +34,35 @@ option = st.selectbox(
     ]
 )
 
+# Prompt builder
+def build_prompt(topic, option):
+    if option == "Explain Concept":
+        return f"Explain {topic} in simple language for a beginner."
 
+    elif option == "Real-Life Example":
+        return f"Give one simple real-life example of {topic}."
+
+    elif option == "Generate Quiz":
+        return f"Create 5 MCQs on {topic} with answers."
+
+    else:
+        return topic
+
+
+# Button action
 if st.button("Generate"):
 
-
-    if topic == "":
+    if topic.strip() == "":
         st.warning("Please enter a topic.")
     else:
+        prompt = build_prompt(topic, option)
 
+        try:
+            response = model.generate_content(prompt)
+            st.success(response.text)
 
-        if option == "Explain Concept":
-            prompt = f"Explain {topic} in simple language for a beginner."
+        except ResourceExhausted:
+            st.error("Quota exceeded. Please wait a few minutes or use a new API key.")
 
-
-        elif option == "Real-Life Example":
-            prompt = f"Give one simple real-life example of {topic}."
-
-
-        elif option == "Generate Quiz":
-            prompt = f"Create 5 MCQs on {topic} with answers."
-
-
-        else:
-            prompt = topic
-
-
-        response = model.generate_content(prompt)
-
-
-        st.write(response.text)
+        except Exception as e:
+            st.error(f"Error: {e}")
